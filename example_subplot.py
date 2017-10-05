@@ -1,7 +1,7 @@
 #!/usr/bin/env python
-#### this file is a little stiff but can be altered for our needs, think it would be a good idea to pair this with
-#### a subplot routine so we can get a closer look, maybe center the example_subplot.py script around the maximum
-#### departure from the diff'd netcdfs?
+#### see example_plot.py for comments, only difference in this file is that it uses the orthographic projection
+#### https://matplotlib.org/basemap/users/ortho.html
+#### in this case it was hard-coded for south america, but could be wherever the maximum departure is in the netcdf diff
 
 import matplotlib
 matplotlib.use('agg') # cannot plt.show() with this, but pyplot fails on the compute nodes without an X Server
@@ -33,7 +33,8 @@ def make_plot(data,title,cbartitle,lon,lat,mymin,mymax,myticks,ncolors,ncontours
 	fontfam='serif'
 	plt.figure()
 	# basemap
-	m = Basemap(llcrnrlon=lon[0],llcrnrlat=lat[0],urcrnrlon=lon[-1],urcrnrlat=lat[-1],projection='cyl')
+	#m = Basemap(llcrnrlon=lon[0],llcrnrlat=lat[0],urcrnrlon=lon[-1],urcrnrlat=lat[-1],projection='cyl')
+	m = Basemap(lon_0=290,lat_0=-20,projection='ortho')
 	lon,lat = np.meshgrid(lon,lat)
 	x,y = m(lon,lat)
 	m.drawcoastlines()
@@ -56,7 +57,7 @@ def make_plot(data,title,cbartitle,lon,lat,mymin,mymax,myticks,ncolors,ncontours
         plt.xticks([0, 90, 180, 270, 360],['$0^o E$', '$90^o E$', '$180^o E$', '$270^o E$', '$360^o E$'])
         plt.yticks([-90, -45, 0, 45, 90],['$90^o S$', '$45^o S$', '$0^o$', '$45^o N$', '$90^o N$'])
         plt.grid()
-	plt.title(title+timestamp, fontsize=20, fontname=fontfam)
+	plt.title(title+'\n'+timestamp, fontsize=20, fontname=fontfam)
 	# output
 	plt.savefig(path.join(args.output_directory,savename+'.'+timestamp+'.eps'))
 	plt.close()
@@ -67,17 +68,19 @@ def make_plots(i):
 	## read in netcdf data
 	timestamp = get_timestamp(input_file)
 	dataset = Dataset(input_file)
+	#startlat=26;endlat=52
+	#startlon=68;endlon=83
 	lon = dataset.variables['longitude'][:]
 	lat = dataset.variables['latitude'][:]
 	## make plots
 	for j,type in enumerate(types):
 		print type
-		if heights[j]:
-			data = dataset.variables[type][0,42,:,:]
-		else:
-			data = dataset.variables[type][0,:,:]
-		max = np.abs(data).max() # make sure the colorbar is symmetric about 0
-		make_plot(data,type+' difference at ','',lon,lat,-1*max,max,nContours,nColors,nContours,'bwr',timestamp,type)
+		for level in range(30,33):
+			if heights[j]:
+				data = dataset.variables[type][0,level,:,:]
+			else:
+				data = dataset.variables[type][0,:,:]
+			make_plot(data,type+' at '+str(level*5+90)+'km','[units]',lon,lat,data.min(),data.max(),nContours,nColors,nContours,'gist_ncar',timestamp,type+'L'+str(level))
 	
 def writetex():
 	# file name definitions to search for
@@ -135,9 +138,8 @@ parser.add_argument('-o', '--output_directory', help='directory where plots are 
 args = parser.parse_args()
 
 ## get our list of files
-ipeFiles = ['IPE_State.201303160103.nc','IPE_State.201303160106.nc','IPE_State.201303160109.nc']
-types =   ['H+','He+','N+','N2','N2+','NO+','O','O+','O2','O2+','TEC','e','hmf2','nmf2','tn','vn_meridional','vn_vertical','vn_zonal']
-heights = [True,True, True,True,True, True, True,True,True,True,False,True,False,False,True, True,           True,         True]
-print heights
+ipeFiles = ['IPE_State.201303160003.nc','IPE_State.201303160006.nc','IPE_State.201303160009.nc']
+types =   ['tn','vn_meridional','vn_zonal']
+heights = [True,True, True]
 ## run the program
 main()

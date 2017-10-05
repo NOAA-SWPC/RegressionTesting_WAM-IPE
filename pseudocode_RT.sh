@@ -9,5 +9,6 @@
 #   for each build
 #     submit standard 1hr run-script using scripts/compsets
 #     do post-processing
-#     rsync with external server
-#     update website
+#        diff from baseline
+#        if != baseline, then make plots
+#     rsync data with external server/update website
